@@ -9,6 +9,7 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
+import com.blackshark.gamepadservice.BsGamePadService;
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.core.VirtualCore;
 import com.lody.virtual.client.interfaces.IInjector;
@@ -38,12 +39,14 @@ public class HCallbackStub implements Handler.Callback, IInjector {
         ActivityThread.H.SCHEDULE_CRASH != null ? ActivityThread.H.SCHEDULE_CRASH.get() : -1;
     private static final int LAUNCH_ACTIVITY =
         ActivityThread.H.LAUNCH_ACTIVITY != null ? ActivityThread.H.LAUNCH_ACTIVITY.get() : -1;
+    private static final int ENTER_ANIMATION_COMPLETE = ActivityThread.H.ENTER_ANIMATION_COMPLETE.get();
 
     private static final String TAG = HCallbackStub.class.getSimpleName();
     private static final HCallbackStub sCallback = new HCallbackStub();
 
     private boolean mCalling = false;
 
+    private BsGamePadService mBsGamePadService = null;
 
     private Handler.Callback otherCallback;
 
@@ -90,7 +93,19 @@ public class HCallbackStub implements Handler.Callback, IInjector {
                 } else if (SCHEDULE_CRASH == msg.what) {
                     // to avoid the exception send from System.
                     return true;
+                } else if (ENTER_ANIMATION_COMPLETE == msg.what) {
+                    if (mBsGamePadService == null) {
+                        mBsGamePadService = new BsGamePadService(VirtualCore.get().getContext(), (IBinder)msg.obj);
+                    }
+
+                    mBsGamePadService.start();
                 }
+//                else if (STOP_ACTIVITY_HIDE == msg.what){
+//                    if (mBsGamePadService != null){
+//                        mBsGamePadService.stop();
+//                    }
+//                }
+
                 if (otherCallback != null) {
                     boolean desired = otherCallback.handleMessage(msg);
                     mCalling = false;

@@ -41,6 +41,9 @@ static struct {
     jint api_level;
     jmethodID method_onGetCallingUid;
     jmethodID method_onOpenDexFileNative;
+    char* pOrigMethod_onInputEvent;
+    size_t method_count;
+    size_t method_size;
 
     void *art_work_around_app_jni_bugs;
 
@@ -361,7 +364,62 @@ replaceAudioRecordNativeCheckPermission(jobject javaMethod, jboolean isArt, int 
     *funPtr = (void *) new_native_audioRecordNativeCheckPermission;
 }
 
+void calculateMethodSize(JNIEnv* env){
+    jmethodID mtd_stub1 = env->GetStaticMethodID(nativeEngineClass.get(), "stub1", "()V");
+    jmethodID mtd_stub2 = env->GetStaticMethodID(nativeEngineClass.get(), "stub2", "()V");
+    patchEnv.method_size = reinterpret_cast<size_t>(mtd_stub2) - reinterpret_cast<size_t>(mtd_stub1);
+    ALOGE("[%s:%d] patchEnv.method_size = %u\n", __func__, __LINE__, patchEnv.method_size);
+    patchEnv.method_count = 0;
+    patchEnv.pOrigMethod_onInputEvent = (char*)calloc(patchEnv.method_size, HOOK_METHODS_COUNT);
+    if (patchEnv.pOrigMethod_onInputEvent == NULL){
+        ALOGE("[%s:%d] nomem for backup method\n", __func__, __LINE__);
+        return;
+    }
+}
 
+void hookMethod(JArrayClass<jobject> srcMethods, JArrayClass<jobject> destMethods){
+    JNIEnv *env = Environment::current();
+    if (srcMethods.size() != destMethods.size()){
+        return;
+    }
+
+    if (patchEnv.method_count == 0) {
+        for (int i=0;i<srcMethods.size();i++){
+            void *srcMethodId = reinterpret_cast<void *>
+                    (env->FromReflectedMethod(srcMethods.getElement(i).get()));
+            void *destMethodId = reinterpret_cast<void *>
+                    (env->FromReflectedMethod(destMethods.getElement(i).get()));
+
+            memcpy(patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*patchEnv.method_count++),
+                    srcMethodId, patchEnv.method_size);
+            memcpy(srcMethodId, destMethodId, patchEnv.method_size);
+        }
+    }
+}
+
+void backupMethod(JArrayClass<jobject> srcMethods){
+    JNIEnv *env = Environment::current();
+    if (patchEnv.method_count != 0) {
+        for (int i=0;i<patchEnv.method_count;i++){
+            void *srcMethodId = reinterpret_cast<void *>
+                    (env->FromReflectedMethod(srcMethods.getElement(i).get()));
+            memcpy(srcMethodId, patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*i), patchEnv.method_size);
+        }
+
+        patchEnv.method_count = 0;
+    }
+}
+
+void callMethod(jobject viewRootImpl, jint methodIndex, jobject queuedInputEvent){
+    JNIEnv *env = Environment::current();
+    if (patchEnv.method_count != 0){
+        jmethodID method = reinterpret_cast<jmethodID>(patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*methodIndex));
+        env->CallVoidMethod(viewRootImpl, method, queuedInputEvent);
+        if (env->ExceptionCheck()){
+            ALOGE("[%s:%d] FAILED to call method\n", __func__, __LINE__);
+        }
+    }
+}
 /**
  * Only called once.
  * @param javaMethod Method from Java
@@ -391,6 +449,8 @@ void hookAndroidVM(JArrayClass<jobject> javaMethods,
     patchEnv.method_onOpenDexFileNative = env->GetStaticMethodID(nativeEngineClass.get(),
                                                                  "onOpenDexFileNative",
                                                                  "([Ljava/lang/String;)V");
+
+    calculateMethodSize(env);
 
     if (isArt) {
         patchEnv.art_work_around_app_jni_bugs = dlsym(soInfo, "art_work_around_app_jni_bugs");

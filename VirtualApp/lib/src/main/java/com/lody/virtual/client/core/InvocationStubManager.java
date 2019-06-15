@@ -69,7 +69,6 @@ import static android.os.Build.VERSION_CODES.N;
  *
  */
 public final class InvocationStubManager {
-
     private static InvocationStubManager sInstance = new InvocationStubManager();
     private static boolean sInit;
 

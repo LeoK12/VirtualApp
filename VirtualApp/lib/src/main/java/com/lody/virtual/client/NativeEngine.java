@@ -186,6 +186,10 @@ public class NativeEngine {
         }
     }
 
+    //define two methods as follows to caculate methodsize.
+    public static void stub1(){}
+    public static void stub2(){}
+
 
     private static native void nativeLaunchEngine(Object[] method, String hostPackageName, boolean isArt, int apiLevel, int cameraMethodType);
 
@@ -206,4 +210,10 @@ public class NativeEngine {
     public static int onGetUid(int uid) {
         return VClientImpl.get().getBaseVUid();
     }
+
+    public static native void nativeHookMethod(Object[] srcMethods, Object[] destMethods);
+
+    public static native void nativeBackupMethod(Object[] srcMethods);
+
+    public static native void nativeCallMethod(Object viewRootImpl, Object queuedInputEvent, int methodIndex);
 }

@@ -99,5 +99,7 @@ public class ActivityThread {
         public static RefStaticInt CREATE_SERVICE;
         public static RefStaticInt SCHEDULE_CRASH;
         public static RefStaticInt EXECUTE_TRANSACTION;
+        public static RefStaticInt ENTER_ANIMATION_COMPLETE;
+//        public static RefStaticInt STOP_ACTIVITY_HIDE;
     }
 }

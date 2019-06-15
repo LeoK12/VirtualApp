@@ -55,6 +55,18 @@ static jstring jni_nativeReverseRedirectedPath(alias_ref<jclass> jclazz, jstring
     return Environment::current()->NewStringUTF(orig_path);
 }
 
+static void jni_nativeHookMethod(alias_ref<jclass> clazz, JArrayClass<jobject> srcMethods, JArrayClass<jobject> destMethods) {
+    return hookMethod(srcMethods, destMethods);
+}
+
+static void jni_nativeBackupMethod(alias_ref<jclass> clazz, JArrayClass<jobject> srcMethods) {
+    return backupMethod(srcMethods);
+}
+
+static void jni_nativeCallMethod(alias_ref<jclass> clazz, jobject viewRootImpl, jobject queuedInputEvent, jint methodIndex) {
+    return callMethod(viewRootImpl, methodIndex, queuedInputEvent);
+}
+
 
 alias_ref<jclass> nativeEngineClass;
 
@@ -77,6 +89,9 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
                                          jni_nativeReverseRedirectedPath),
                         makeNativeMethod("nativeLaunchEngine",
                                          jni_nativeLaunchEngine),
+                        makeNativeMethod("nativeHookMethod", jni_nativeHookMethod),
+                        makeNativeMethod("nativeBackupMethod", jni_nativeBackupMethod),
+                        makeNativeMethod("nativeCallMethod", jni_nativeCallMethod),
                 }
         );
     });
