@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.IBinder;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
+import android.util.Log;
 
 import com.lody.virtual.client.core.InstallStrategy;
 import com.lody.virtual.client.core.VirtualCore;
@@ -152,6 +153,9 @@ public class VAppManagerService implements IAppManager {
         if (!packageFile.exists() || !packageFile.isFile()) {
             return InstallResult.makeFailure("Package File is not exist.");
         }
+
+        Log.e(TAG, "packageFile = " + packageFile);
+
         VPackage pkg = null;
         try {
             pkg = PackageParserEx.parsePackage(packageFile);

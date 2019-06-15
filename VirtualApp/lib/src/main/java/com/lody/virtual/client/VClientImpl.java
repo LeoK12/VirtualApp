@@ -21,7 +21,6 @@ import android.os.IBinder;
 import android.os.IInterface;
 import android.os.Looper;
 import android.os.Message;
-import android.os.Parcelable;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.StrictMode;
@@ -204,17 +203,18 @@ public final class VClientImpl extends IVClient.Stub {
     public void bindApplication(final String packageName, final String processName) {
         if (Looper.getMainLooper() == Looper.myLooper()) {
             bindApplicationNoCheck(packageName, processName, new ConditionVariable());
-        } else {
-            final ConditionVariable lock = new ConditionVariable();
-            VirtualRuntime.getUIHandler().post(new Runnable() {
-                @Override
-                public void run() {
-                    bindApplicationNoCheck(packageName, processName, lock);
-                    lock.open();
-                }
-            });
-            lock.block();
+            return;
         }
+
+        final ConditionVariable lock = new ConditionVariable();
+        VirtualRuntime.getUIHandler().post(new Runnable() {
+            @Override
+            public void run() {
+                bindApplicationNoCheck(packageName, processName, lock);
+                lock.open();
+            }
+        });
+        lock.block();
     }
 
     private void bindApplicationNoCheck(String packageName, String processName, ConditionVariable lock) {
@@ -254,8 +254,10 @@ public final class VClientImpl extends IVClient.Stub {
         VirtualRuntime.setupRuntime(data.processName, data.appInfo);
         int targetSdkVersion = data.appInfo.targetSdkVersion;
         if (targetSdkVersion < Build.VERSION_CODES.GINGERBREAD) {
-            StrictMode.ThreadPolicy newPolicy = new StrictMode.ThreadPolicy.Builder(StrictMode.getThreadPolicy()).permitNetwork().build();
-            StrictMode.setThreadPolicy(newPolicy);
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder(StrictMode.getThreadPolicy()).permitNetwork().build());
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N){
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().build());
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && targetSdkVersion < Build.VERSION_CODES.LOLLIPOP) {
             mirror.android.os.Message.updateCheckRecycle.call(targetSdkVersion);
@@ -556,8 +558,7 @@ public final class VClientImpl extends IVClient.Stub {
     }
 
     private void clearSettingProvider() {
-        Object cache;
-        cache = Settings.System.sNameValueCache.get();
+        Object cache = Settings.System.sNameValueCache.get();
         if (cache != null) {
             clearContentProvider(cache);
         }

@@ -6,7 +6,7 @@ android {
     buildToolsVersion '26.0.2'
     defaultConfig {
         applicationId "io.virtualapp"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 22
         versionCode 24
         versionName "1.2.5"
@@ -37,6 +37,12 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            it.getPackageApplication().outputDirectory = new File("Z:/hook/")
+            outputFileName = new File("virtualapp.apk")
+        }
+    }
 }
 
 android {

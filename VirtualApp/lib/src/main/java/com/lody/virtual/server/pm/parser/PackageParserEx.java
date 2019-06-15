@@ -200,9 +200,9 @@ public class PackageParserEx {
         ai.name = ComponentFixer.fixComponentClassName(ps.packageName, ai.name);
         ai.publicSourceDir = ps.apkPath;
         ai.sourceDir = ps.apkPath;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ai.splitSourceDirs = new String[]{ps.apkPath};
-            ai.splitPublicSourceDirs = ai.splitSourceDirs;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//            ai.splitSourceDirs = new String[]{ps.apkPath};
+//            ai.splitPublicSourceDirs = ai.splitSourceDirs;
             ApplicationInfoL.scanSourceDir.set(ai, ai.dataDir);
             ApplicationInfoL.scanPublicSourceDir.set(ai, ai.dataDir);
             String hostPrimaryCpuAbi = ApplicationInfoL.primaryCpuAbi.get(VirtualCore.get().getContext().getApplicationInfo());

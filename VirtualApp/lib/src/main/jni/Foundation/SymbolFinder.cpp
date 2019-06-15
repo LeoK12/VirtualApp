@@ -350,7 +350,7 @@ static int lookup2(struct symlist *sl, unsigned char type, char *name,
 
     len = strlen(name);
     for (i = 0, p = sl->sym; i < sl->num; i++, p++) {
-        //ALOGD("name: %s %x\n", sl->str+p->st_name, p->st_value)
+//        ALOGD("name: %s %x\n", sl->str+p->st_name, p->st_value);
         if (!strncmp(sl->str + p->st_name, name, len)
             && *(sl->str + p->st_name + len) == 0
             && ELF32_ST_TYPE(p->st_info) == type) {
@@ -388,13 +388,12 @@ int find_name(pid_t pid, const char *name, const char *libn,
         ALOGD("cannot read memory map\n");
         return -1;
     }
-    if (0
-        > find_libname((char *) libn, (char *) libc, sizeof(libc),
+    if (0 > find_libname((char *) libn, (char *) libc, sizeof(libc),
                        &libcaddr, mm, nmm)) {
         ALOGD("cannot find lib: %s\n", libn);
         return -1;
     }
-    //ALOGD("lib: >%s<\n", libc)
+    ALOGD("lib: >%s<\n", libc);
     s = load_symtab(libc);
     if (!s) {
         ALOGD("cannot read symbol table\n");

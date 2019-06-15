@@ -5,7 +5,9 @@ import android.app.DownloadManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.util.Log;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +23,7 @@ import mirror.android.webkit.WebViewFactory;
  * @author Lody
  */
 public final class SpecialComponentList {
-
+    private static final String TAG = SpecialComponentList.class.getSimpleName();
     private static final List<String> ACTION_BLACK_LIST = new ArrayList<String>(1);
     private static final Map<String, String> PROTECTED_ACTION_MAP = new HashMap<>(5);
     private static final HashSet<String> WHITE_PERMISSION = new HashSet<>(3);
@@ -75,9 +77,12 @@ public final class SpecialComponentList {
         SPEC_SYSTEM_APP_LIST.add("com.google.android.webview");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             try {
-                String webViewPkgN = IWebViewUpdateService.getCurrentWebViewPackageName.call(WebViewFactory.getUpdateService.call());
-                if (webViewPkgN != null) {
-                    SPEC_SYSTEM_APP_LIST.add(webViewPkgN);
+                Object service = WebViewFactory.getUpdateService.call();
+                if (service != null) {
+                    String webViewPkgN = IWebViewUpdateService.getCurrentWebViewPackageName.call(service);
+                    if (webViewPkgN != null) {
+                        SPEC_SYSTEM_APP_LIST.add(webViewPkgN);
+                    }
                 }
             } catch (Throwable e) {
                 e.printStackTrace();

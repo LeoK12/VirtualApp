@@ -9,24 +9,24 @@ import android.content.pm.ActivityInfo;
  */
 
 public class StubActivityRecord  {
-        public Intent intent;
-        public ActivityInfo info;
-        public ComponentName caller;
-        public int userId;
+    public Intent intent;
+    public ActivityInfo info;
+    public ComponentName caller;
+    public int userId;
 
-        public StubActivityRecord(Intent intent, ActivityInfo info, ComponentName caller, int userId) {
-            this.intent = intent;
-            this.info = info;
-            this.caller = caller;
-            this.userId = userId;
-        }
+    public StubActivityRecord(Intent intent, ActivityInfo info, ComponentName caller, int userId) {
+        this.intent = intent;
+        this.info = info;
+        this.caller = caller;
+        this.userId = userId;
+    }
 
-        public StubActivityRecord(Intent stub) {
-            this.intent = stub.getParcelableExtra("_VA_|_intent_");
-            this.info = stub.getParcelableExtra("_VA_|_info_");
-            this.caller = stub.getParcelableExtra("_VA_|_caller_");
-            this.userId = stub.getIntExtra("_VA_|_user_id_", 0);
-        }
+    public StubActivityRecord(Intent stub) {
+        this.intent = stub.getParcelableExtra("_VA_|_intent_");
+        this.info = stub.getParcelableExtra("_VA_|_info_");
+        this.caller = stub.getParcelableExtra("_VA_|_caller_");
+        this.userId = stub.getIntExtra("_VA_|_user_id_", 0);
+    }
 
     public void saveToIntent(Intent stub) {
         stub.putExtra("_VA_|_intent_", intent);

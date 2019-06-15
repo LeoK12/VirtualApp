@@ -8,7 +8,7 @@ import mirror.RefMethod;
  */
 
 public class IWebViewUpdateService {
-    public static Class<?> TYPE = RefClass.load(IWebViewUpdateService.class, "android.webkit.IWebViewUpdateService$Stub$Proxy");
+    public static Class<?> TYPE = RefClass.load(IWebViewUpdateService.class, "android.webkit.WebViewUpdateService");
 
     public static RefMethod<String> getCurrentWebViewPackageName;
 }

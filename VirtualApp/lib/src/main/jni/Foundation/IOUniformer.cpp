@@ -605,6 +605,17 @@ HOOK_DEF(void*, do_dlopen_V24, const char *name, int flags, const void *extinfo,
     return ret;
 }
 
+HOOK_DEF(void*, do_dlopen_V26, const char *name, int flags, const void *extinfo,
+         void *caller_addr) {
+    int res;
+    const char *redirect_path = relocate_path(name, &res);
+    void *ret = orig_do_dlopen_V26(redirect_path, flags, extinfo, caller_addr);
+    onSoLoaded(name, ret);
+    ALOGD("do_dlopen : %s, return : %p.", redirect_path, ret);
+    FREE(redirect_path, name);
+    return ret;
+}
+
 
 
 //void *dlsym(void *handle,const char *symbol)
@@ -638,7 +649,13 @@ int findSymbol(const char *name, const char *libn,
 
 void hook_dlopen(int api_level) {
     void *symbol = NULL;
-    if (api_level > 23) {
+    if (api_level >= 26) {
+        if (findSymbol("__dl__Z9do_dlopenPKciPK17android_dlextinfoPKv", "linker",
+                       (unsigned long *) &symbol) == 0) {
+            MSHookFunction(symbol, (void *) new_do_dlopen_V24,
+                           (void **) &orig_do_dlopen_V24);
+        }
+    } else if (api_level >= 23) {
         if (findSymbol("__dl__Z9do_dlopenPKciPK17android_dlextinfoPv", "linker",
                        (unsigned long *) &symbol) == 0) {
             MSHookFunction(symbol, (void *) new_do_dlopen_V24,
