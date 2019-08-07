@@ -7,14 +7,14 @@ android {
     defaultConfig {
         applicationId "io.virtualapp"
         minSdkVersion 19
-        targetSdkVersion 22
+        targetSdkVersion 26
         versionCode 24
         versionName "1.2.5"
         multiDexEnabled true
         android {
             defaultConfig {
                 ndk {
-                    abiFilters "armeabi", "armeabi-v7a", "x86"
+                    abiFilters "armeabi-v7a"
                 }
             }
         }
@@ -39,7 +39,7 @@ android {
 
     applicationVariants.all { variant ->
         variant.outputs.all {
-            it.getPackageApplication().outputDirectory = new File("Z:/hook/")
+//            it.getPackageApplication().outputDirectory = new File("Z:/hook/")
             outputFileName = new File("virtualapp.apk")
         }
     }

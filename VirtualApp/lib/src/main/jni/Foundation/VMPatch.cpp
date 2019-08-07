@@ -377,6 +377,14 @@ void calculateMethodSize(JNIEnv* env){
     }
 }
 
+void printDebugInfo(char* src, int len){
+#if 0
+    for (int i=0;i<len;i++){
+        ALOGE("[%s:%d] src[%d] = %x\n", __func__, __LINE__, i, src[i]);
+    }
+#endif
+}
+
 void hookMethod(JArrayClass<jobject> srcMethods, JArrayClass<jobject> destMethods){
     JNIEnv *env = Environment::current();
     if (srcMethods.size() != destMethods.size()){
@@ -389,6 +397,9 @@ void hookMethod(JArrayClass<jobject> srcMethods, JArrayClass<jobject> destMethod
                     (env->FromReflectedMethod(srcMethods.getElement(i).get()));
             void *destMethodId = reinterpret_cast<void *>
                     (env->FromReflectedMethod(destMethods.getElement(i).get()));
+
+            printDebugInfo((char*)srcMethodId, patchEnv.method_size);
+            printDebugInfo((char*)destMethodId, patchEnv.method_size);
 
             memcpy(patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*patchEnv.method_count++),
                     srcMethodId, patchEnv.method_size);
@@ -410,11 +421,13 @@ void backupMethod(JArrayClass<jobject> srcMethods){
     }
 }
 
-void callMethod(jobject viewRootImpl, jint methodIndex, jobject queuedInputEvent){
+void callMethod(jobject inputEventReceiver, jint methodIndex, jobject inputEvent, jboolean handled){
     JNIEnv *env = Environment::current();
     if (patchEnv.method_count != 0){
-        jmethodID method = reinterpret_cast<jmethodID>(patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*methodIndex));
-        env->CallVoidMethod(viewRootImpl, method, queuedInputEvent);
+        void* srcMethodId = reinterpret_cast<void *>(patchEnv.pOrigMethod_onInputEvent+(patchEnv.method_size*methodIndex));
+        printDebugInfo((char*)srcMethodId, patchEnv.method_size);
+        env->CallVoidMethod(inputEventReceiver, reinterpret_cast<jmethodID>(srcMethodId), inputEvent, handled);
+        ALOGE("[%s:%d]\n", __func__, __LINE__);
         if (env->ExceptionCheck()){
             ALOGE("[%s:%d] FAILED to call method\n", __func__, __LINE__);
         }

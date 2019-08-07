@@ -63,8 +63,8 @@ static void jni_nativeBackupMethod(alias_ref<jclass> clazz, JArrayClass<jobject>
     return backupMethod(srcMethods);
 }
 
-static void jni_nativeCallMethod(alias_ref<jclass> clazz, jobject viewRootImpl, jobject queuedInputEvent, jint methodIndex) {
-    return callMethod(viewRootImpl, methodIndex, queuedInputEvent);
+static void jni_nativeCallMethod(alias_ref<jclass> clazz, jobject inputEventReceiver, jobject inputEvent, jboolean handled, jint methodIndex) {
+    return callMethod(inputEventReceiver, methodIndex, inputEvent, handled);
 }
 
 

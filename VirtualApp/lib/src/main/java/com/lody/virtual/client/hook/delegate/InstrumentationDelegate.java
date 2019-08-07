@@ -18,15 +18,22 @@ import android.os.PersistableBundle;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 /**
  * @author Lody
  */
 public class InstrumentationDelegate extends Instrumentation {
-
+	private static final String TAG = InstrumentationDelegate.class.getSimpleName();
 	protected Instrumentation base;
+	protected Instrumentation realBase;
 
 	public InstrumentationDelegate(Instrumentation base) {
 		this.base = base;
+		if (base != null && base.getClass().equals(Instrumentation.class)){
+			realBase = base;
+		}
 	}
 
 	public static Application newApplication(Class<?> clazz, Context context)
@@ -343,5 +350,27 @@ public class InstrumentationDelegate extends Instrumentation {
 		return base.getUiAutomation();
 	}
 
+	public Instrumentation.ActivityResult execStartActivity(Context who, IBinder contextThread,
+															IBinder token, Activity target,
+															Intent intent, int requestCode,
+															Bundle options){
+		Instrumentation.ActivityResult result = null;
+		try {
+			Class clsInstrumentation = Class.forName("android.app.Instrumentation");
+			Method mtdExecStartActivity = clsInstrumentation.getDeclaredMethod("execStartActivity",
+					Context.class, IBinder.class, IBinder.class, Activity.class, Intent.class,
+					int.class, Bundle.class);
+			if (mtdExecStartActivity == null){
+				return result;
+			}
 
+			mtdExecStartActivity.setAccessible(true);
+			result = (ActivityResult) mtdExecStartActivity.invoke(base, who, contextThread, token,
+					target, intent, requestCode, options);
+		} catch (ClassNotFoundException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			e.printStackTrace();
+		} finally {
+			return result;
+		}
+	}
 }

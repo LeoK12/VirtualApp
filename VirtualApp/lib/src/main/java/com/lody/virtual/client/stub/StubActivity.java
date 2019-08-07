@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.core.InvocationStubManager;
@@ -18,9 +19,10 @@ import com.lody.virtual.remote.StubActivityRecord;
  *
  */
 public abstract class StubActivity extends Activity {
-
+	private final String TAG = StubActivity.class.getSimpleName();
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+		Log.e(TAG, "onCreate");
 		// The savedInstanceState's classLoader is not exist.
 		super.onCreate(null);
 		finish();

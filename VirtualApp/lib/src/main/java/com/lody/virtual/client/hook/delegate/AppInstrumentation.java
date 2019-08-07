@@ -3,12 +3,14 @@ package com.lody.virtual.client.hook.delegate;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Instrumentation;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
+import android.util.Log;
 
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.core.VirtualCore;
@@ -20,6 +22,8 @@ import com.lody.virtual.client.ipc.VActivityManager;
 import com.lody.virtual.helper.compat.BundleCompat;
 import com.lody.virtual.os.VUserHandle;
 import com.lody.virtual.server.interfaces.IUiCallback;
+
+import java.lang.reflect.Field;
 
 import mirror.android.app.ActivityThread;
 
@@ -55,11 +59,38 @@ public final class AppInstrumentation extends InstrumentationDelegate implements
         return new AppInstrumentation(instrumentation);
     }
 
+    private boolean hookbase(Class<?> base){
+        boolean result = true;
+        if (base == null || base.equals(Instrumentation.class)){
+            return false;
+        }
+
+        Field[] fields = base.getDeclaredFields();
+        try {
+            for (Field field : fields) {
+                field.setAccessible(true);
+                if (!field.getType().equals(Instrumentation.class) || !field.get(base).equals(this)) {
+                    continue;
+                }
+
+                field.set(base, realBase);
+                return result;
+            }
+        } catch (Exception e){
+            result = false;
+            e.printStackTrace();
+        }
+
+        return result;
+    }
 
     @Override
-    public void inject() throws Throwable {
+    public void inject() {
         base = ActivityThread.mInstrumentation.get(VirtualCore.mainThread());
         ActivityThread.mInstrumentation.set(VirtualCore.mainThread(), this);
+        if (realBase != null && !base.getClass().equals(Instrumentation.class) && !hookbase(base.getClass())){
+            hookbase(base.getClass().getSuperclass());
+        }
     }
 
     @Override
@@ -92,6 +123,11 @@ public final class AppInstrumentation extends InstrumentationDelegate implements
                     && info.screenOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED) {
                 activity.setRequestedOrientation(info.screenOrientation);
             }
+        }
+        Log.d(TAG, "activity = " +  activity);
+        Log.d(TAG, "icicle = " + icicle);
+        if (icicle == null){
+            icicle = new Bundle();
         }
         super.callActivityOnCreate(activity, icicle);
         VirtualCore.get().getComponentDelegate().afterActivityCreate(activity);
@@ -149,4 +185,12 @@ public final class AppInstrumentation extends InstrumentationDelegate implements
         super.callApplicationOnCreate(app);
     }
 
+    @Override
+    public ActivityResult execStartActivity(Context who, IBinder contextThread, IBinder token, Activity target, Intent intent, int requestCode, Bundle options) {
+        if (intent == null){
+            return null;
+        }
+
+        return super.execStartActivity(who, contextThread, token, target, intent, requestCode, options);
+    }
 }

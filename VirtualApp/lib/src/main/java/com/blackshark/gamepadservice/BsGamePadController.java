@@ -29,8 +29,7 @@ public class BsGamePadController {
     private static final int TYPE_SEND_MOVE_UP = 0;
     private static final int MOVE_DOWN_UP_TIMEOUT = 30;
     private static final int BACKUP_HOOK_TIMEOUT = 70;
-    private static final int TYPE_BACKUP_HOOK = 1;
-    private static final int TYPE_INJECT_EVENT = 2;
+    private static final int TYPE_INJECT_EVENT = 1;
 
     public static final int GAMEBUTTON_START     = 0;
     public static final int GAMEBUTTON_SELECT    = 1;
@@ -55,6 +54,8 @@ public class BsGamePadController {
     public static final int MAX_POINTER_COUNT       = 16;
     public static final int MAX_POINTER_ID_COUNT    = 32;
 
+    private static final int SOURCE_BLACKSHARK_DEVICE = 0x80000000;
+
     private long mGameButtonStatesBitMap = 0;
     private Pos[] mTouchList;
 
@@ -65,8 +66,6 @@ public class BsGamePadController {
     private WindowManager mWindowManager;
     private int mMainDirectionPad;
 
-    private InputEvent mCurrentEvent;
-    private InjectMotionEventThread mInjectMotionEventThread;
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -74,16 +73,13 @@ public class BsGamePadController {
                 case TYPE_SEND_MOVE_UP:
                     int actionIndex = msg.arg1;
                     Pos upPos = (Pos)msg.obj;
-                    InjectMotionEvent event = buildMotionEvent(actionIndex, MotionEvent.ACTION_UP);
+                    MotionEvent event = buildMotionEvent(actionIndex, MotionEvent.ACTION_UP);
                     fire(event);
                     mGameButtonStatesBitMap &= ~(0x1 << msg.arg2);
                     break;
-                case TYPE_BACKUP_HOOK:
-                    mGameService.backupMethod();
-                    break;
                 case TYPE_INJECT_EVENT:
                     MotionEvent motionEvent = (MotionEvent)msg.obj;
-                    mGameService.injectInputEvent(motionEvent, true);
+                    mGameService.injectInputEvent(motionEvent);
                     break;
                 default:
                     break;
@@ -96,7 +92,8 @@ public class BsGamePadController {
             return 0;
         }
 
-        final InputDevice.MotionRange range = device.getMotionRange(axis, event.getSource());
+        int source = event.getSource() & ~SOURCE_BLACKSHARK_DEVICE;
+        final InputDevice.MotionRange range = device.getMotionRange(axis, source);
 
         // A joystick at rest does not always report an absolute position of
         // (0,0). Use the getFlat() method to determine the range of values
@@ -207,13 +204,10 @@ public class BsGamePadController {
         mGamePadMapper = mapper;
         mGameService = service;
         mMainDirectionPad = DIRECTION_PAD_L;
-        mInjectMotionEventThread = new InjectMotionEventThread();
-        mInjectMotionEventThread.start();
     }
 
 
     public void addKeyMapView(){
-        mHandler.sendEmptyMessageDelayed(TYPE_BACKUP_HOOK, BACKUP_HOOK_TIMEOUT);
         WindowManager.LayoutParams innerLp = new WindowManager.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION,
@@ -264,15 +258,13 @@ public class BsGamePadController {
     }
 
     public boolean processInputEvent(InputEvent event){
-        if (DEBUG) Log.d(TAG, "event = " + event);
-        if (DEBUG) Log.d(TAG, "onInputEvent = " + event.toString());
+        if (DEBUG) Log.d(TAG, "onInputEvent : event = " + event.toString());
         boolean isHandled = false;
         if (((event.getSource() & InputDevice.SOURCE_CLASS_JOYSTICK) != 0)
             || ((event.getSource() & InputDevice.SOURCE_GAMEPAD) != 0)
             || ((event.getSource() & InputDevice.SOURCE_TOUCHSCREEN) != 0)
             || ((event.getSource() & InputDevice.SOURCE_KEYBOARD) != 0)) {
             // input device is joystick
-//                mCurrentEvent = MotionEvent.obtain((MotionEvent) event);
             isHandled = processJoystickEvent(event);
         }
 
@@ -371,7 +363,7 @@ public class BsGamePadController {
             }
         }
 
-        InjectMotionEvent motionEvent = buildMotionEvent(actionIndex,
+        MotionEvent motionEvent = buildMotionEvent(actionIndex,
             event.getAction()&MotionEvent.ACTION_MASK);
         fire(motionEvent);
         return true;
@@ -453,7 +445,7 @@ public class BsGamePadController {
                             mGamePadMapper.getGamePadMapper().valueAt(previd).getCenterY());
                         pos.setTouchId(previd);
                         int actionIndex = insertTouch(pos);
-                        InjectMotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_CANCEL);
+                        MotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_CANCEL);
                         fire(motionEvent);
                     }
                 }
@@ -464,7 +456,7 @@ public class BsGamePadController {
                 mGamePadMapper.getGamePadMapper().valueAt(touchid).getCenterY());
             pos.setTouchId(touchid);
             int actionIndex = insertTouch(pos);
-            InjectMotionEvent motionEvent = buildMotionEvent(actionIndex, event.getAction());
+            MotionEvent motionEvent = buildMotionEvent(actionIndex, event.getAction());
             fire(motionEvent);
         }
 
@@ -588,7 +580,7 @@ public class BsGamePadController {
                         downPos.setTouchId(touchid);
                         int actionIndex = insertTouch(downPos);
 
-                        InjectMotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_DOWN);
+                        MotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_DOWN);
                         fire(motionEvent);
                     }
                 }
@@ -624,13 +616,13 @@ public class BsGamePadController {
                 pos.setTouchId(touchid);
                 int actionIndex = insertTouch(pos);
 
-                InjectMotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_MOVE);
+                MotionEvent motionEvent = buildMotionEvent(actionIndex, MotionEvent.ACTION_MOVE);
                 fire(motionEvent);
             }
         }
     }
 
-    private InjectMotionEvent buildMotionEvent(int actionIndex, int action) {
+    private MotionEvent buildMotionEvent(int actionIndex, int action) {
         if (DEBUG){
             Log.d(TAG, "buildMotionEvent " + actionIndex);
             if (actionIndex < 0 && actionIndex >= MAX_POINTER_COUNT){
@@ -722,96 +714,17 @@ public class BsGamePadController {
             0  // flags
         );
 
-        boolean waitForFinish = false;
         if (((action&MotionEvent.ACTION_MASK) == MotionEvent.ACTION_DOWN ||
             (action&MotionEvent.ACTION_MASK) == MotionEvent.ACTION_POINTER_DOWN) /* && !fromTouch */ ){
-            waitForFinish = true;
         }
 
-        return new InjectMotionEvent(mCurrentEvent, motionEvent, waitForFinish);
+        return motionEvent;
     }
 
-    private void fire(InjectMotionEvent injectMotionEvent) {
-        mInjectMotionEventThread.inputMotionEvent(injectMotionEvent);
-    }
-
-    public InjectMotionEventThread getInjectMotionEventThread(){
-        return mInjectMotionEventThread;
-    }
-
-    public class InjectMotionEvent{
-        public InputEvent orgEvent;
-        public MotionEvent injectEvent;
-        public boolean waitForFinish;
-
-        InjectMotionEvent(InputEvent orgEvent, MotionEvent injectEvent, boolean waitForFinish){
-            this.orgEvent = orgEvent;
-            this.injectEvent = injectEvent;
-            this.waitForFinish = waitForFinish;
-        }
-    }
-
-    public class InjectMotionEventThread extends Thread{
-        Queue<InjectMotionEvent> motionEventQueue = new ArrayBlockingQueue<InjectMotionEvent>(32);
-        Object objWaitForFinish = new Object();
-
-        public void inputMotionEvent(InjectMotionEvent injectMotionEvent){
-            synchronized (motionEventQueue){
-//                    try {
-                motionEventQueue.add(injectMotionEvent);
-//                    } catch (Exception e){
-//                        e.printStackTrace();
-//                        nofityForFinish();
-//                    }
-                motionEventQueue.notify();
-            }
-        }
-
-        public void nofityForFinish(){
-            synchronized (objWaitForFinish){
-                try {
-                    objWaitForFinish.notify();
-                } catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        @Override
-        public void run() {
-            while (true){
-                InjectMotionEvent event;
-                synchronized (motionEventQueue){
-                    event = motionEventQueue.poll();
-                    if (event == null){
-                        try {
-                            motionEventQueue.wait();
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
-
-                        event = motionEventQueue.poll();
-                    }
-                }
-
-                if (DEBUG) {
-                    Log.d(TAG, "InjectMotionEventThread:run event = " + event);
-                }
-
-                Message msg = mHandler.obtainMessage(TYPE_INJECT_EVENT);
-                msg.obj = event.injectEvent;
-                mHandler.sendMessage(msg);
-                //mGameService.injectInputEvent(event.injectEvent, true);
-                if (event.waitForFinish) {
-                    synchronized (objWaitForFinish) {
-                        try {
-                            objWaitForFinish.wait();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-        }
+    private void fire(MotionEvent event) {
+        if (DEBUG)Log.d(TAG, "fire event = " + event);
+        Message msg = mHandler.obtainMessage(TYPE_INJECT_EVENT);
+        msg.obj = event;
+        mHandler.sendMessage(msg);
     }
 }

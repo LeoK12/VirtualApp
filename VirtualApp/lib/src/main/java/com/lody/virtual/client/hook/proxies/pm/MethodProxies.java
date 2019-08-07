@@ -646,6 +646,11 @@ class MethodProxies {
             return null;
         }
 
+        @Override
+        public boolean isEnable() {
+            return !isAppProcess();
+        }
+
     }
 
 

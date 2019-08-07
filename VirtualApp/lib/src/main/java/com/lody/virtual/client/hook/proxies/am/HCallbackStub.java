@@ -9,6 +9,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
+import com.blackshark.gamepadservice.BsGamePadHookNative;
+import com.blackshark.gamepadservice.BsGamePadProxyMaker;
 import com.blackshark.gamepadservice.BsGamePadService;
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.core.VirtualCore;
@@ -20,6 +22,7 @@ import com.lody.virtual.helper.utils.VLog;
 import com.lody.virtual.remote.InstalledAppInfo;
 import com.lody.virtual.remote.StubActivityRecord;
 
+import java.io.IOException;
 import java.util.List;
 
 import mirror.android.app.ActivityManagerNative;
@@ -27,6 +30,9 @@ import mirror.android.app.ActivityThread;
 import mirror.android.app.IActivityManager;
 import mirror.android.app.servertransaction.ClientTransaction;
 import mirror.android.app.servertransaction.LaunchActivityItem;
+
+import static com.blackshark.gamepadservice.BsGamePadService.BLACK_SHARK_HOOK_NATIVE_SERVICE;
+import static com.blackshark.gamepadservice.BsGamePadService.BLACK_SHARK_PROXY_MAKER_SERVICE;
 
 /**
  * @author Lody
@@ -40,6 +46,8 @@ public class HCallbackStub implements Handler.Callback, IInjector {
     private static final int LAUNCH_ACTIVITY =
         ActivityThread.H.LAUNCH_ACTIVITY != null ? ActivityThread.H.LAUNCH_ACTIVITY.get() : -1;
     private static final int ENTER_ANIMATION_COMPLETE = ActivityThread.H.ENTER_ANIMATION_COMPLETE.get();
+    private static final int ENABLE_JIT = ActivityThread.H.ENABLE_JIT.get();
+
 
     private static final String TAG = HCallbackStub.class.getSimpleName();
     private static final HCallbackStub sCallback = new HCallbackStub();
@@ -95,10 +103,31 @@ public class HCallbackStub implements Handler.Callback, IInjector {
                     return true;
                 } else if (ENTER_ANIMATION_COMPLETE == msg.what) {
                     if (mBsGamePadService == null) {
-                        mBsGamePadService = new BsGamePadService(VirtualCore.get().getContext(), (IBinder)msg.obj);
+                        String service = BsGamePadService.getServiceType(VirtualCore.get().getContext());
+                        switch (service){
+                            case BLACK_SHARK_HOOK_NATIVE_SERVICE:
+                                mBsGamePadService = new BsGamePadHookNative(VirtualCore.get().getContext());
+                                break;
+                            case BLACK_SHARK_PROXY_MAKER_SERVICE:
+                                mBsGamePadService = new BsGamePadProxyMaker(VirtualCore.get().getContext());
+                                break;
+                            default:
+                                return false;
+                        }
                     }
 
-                    mBsGamePadService.start();
+                    if (mBsGamePadService != null) {
+                        mBsGamePadService.setToken((IBinder) msg.obj);
+                        mBsGamePadService.loadConfig();
+                    }
+                } else if (ENABLE_JIT == msg.what) {
+                    if (mBsGamePadService != null) {
+                        try {
+                            mBsGamePadService.start();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
 //                else if (STOP_ACTIVITY_HIDE == msg.what){
 //                    if (mBsGamePadService != null){
@@ -130,7 +159,8 @@ public class HCallbackStub implements Handler.Callback, IInjector {
         }
 
         Object ClientTransactionItem = ClientTransactionItemList.get(0);
-        StubActivityRecord activityRecord = new StubActivityRecord(LaunchActivityItem.mIntent.get(ClientTransactionItem));
+        StubActivityRecord activityRecord =
+                new StubActivityRecord(LaunchActivityItem.mIntent.get(ClientTransactionItem));
         if (activityRecord.intent == null){
             return true;
         }
@@ -140,11 +170,13 @@ public class HCallbackStub implements Handler.Callback, IInjector {
         IBinder localIBinder = ClientTransaction.getActivityToken.call(r);
         ActivityInfo localActivityInfo = activityRecord.info;
         if (VClientImpl.get().getToken() == null) {
-            InstalledAppInfo installedAppInfo = VirtualCore.get().getInstalledAppInfo(localActivityInfo.packageName, 0);
+            InstalledAppInfo installedAppInfo =
+                    VirtualCore.get().getInstalledAppInfo(localActivityInfo.packageName, 0);
             if(installedAppInfo == null){
                 return true;
             }
-            VActivityManager.get().processRestarted(localActivityInfo.packageName, localActivityInfo.processName, activityRecord.userId);
+            VActivityManager.get().processRestarted(localActivityInfo.packageName,
+                    localActivityInfo.processName, activityRecord.userId);
             getH().sendMessageAtFrontOfQueue(Message.obtain(msg));
             return false;
         }
@@ -161,7 +193,10 @@ public class HCallbackStub implements Handler.Callback, IInjector {
             false
         );
 
-        VActivityManager.get().onActivityCreate(ComponentUtils.toComponentName(localActivityInfo), localComponentName, localIBinder, localActivityInfo, localIntent, ComponentUtils.getTaskAffinity(localActivityInfo), taskId, localActivityInfo.launchMode, localActivityInfo.flags);
+        VActivityManager.get().onActivityCreate(ComponentUtils.toComponentName(localActivityInfo),
+            localComponentName, localIBinder, localActivityInfo, localIntent,
+            ComponentUtils.getTaskAffinity(localActivityInfo), taskId, localActivityInfo.launchMode,
+            localActivityInfo.flags);
         ClassLoader appClassLoader = VClientImpl.get().getClassLoader(localActivityInfo.applicationInfo);
         localIntent.setExtrasClassLoader(appClassLoader);
         ActivityThread.ActivityClientRecord.intent.set(r, localIntent);
@@ -201,7 +236,8 @@ public class HCallbackStub implements Handler.Callback, IInjector {
             token,
             false
         );
-        VActivityManager.get().onActivityCreate(ComponentUtils.toComponentName(info), caller, token, info, intent, ComponentUtils.getTaskAffinity(info), taskId, info.launchMode, info.flags);
+        VActivityManager.get().onActivityCreate(ComponentUtils.toComponentName(info), caller, token,
+            info, intent, ComponentUtils.getTaskAffinity(info), taskId, info.launchMode, info.flags);
         ClassLoader appClassLoader = VClientImpl.get().getClassLoader(info.applicationInfo);
         intent.setExtrasClassLoader(appClassLoader);
         ActivityThread.ActivityClientRecord.intent.set(r, intent);

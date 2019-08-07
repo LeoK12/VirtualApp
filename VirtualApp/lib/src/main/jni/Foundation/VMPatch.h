@@ -34,6 +34,6 @@ void *getDvmOrArtSOHandle();
 
 void hookMethod(JArrayClass<jobject> srcMethods, JArrayClass<jobject> destMethods);
 void backupMethod(JArrayClass<jobject> srcMethods);
-void callMethod(jobject viewRootImpl, jint index, jobject queuedInputEvent);
+void callMethod(jobject inputEventReceiver, jint methodIndex, jobject inputEvent, jboolean handled);
 
 #endif //NDK_HOOK_NATIVE_H

@@ -223,11 +223,11 @@ public final class VClientImpl extends IVClient.Stub {
             processName = packageName;
         }
         mTempLock = lock;
-        try {
-            setupUncaughtHandler();
-        } catch (Throwable e) {
-            e.printStackTrace();
-        }
+//        try {
+//            setupUncaughtHandler();
+//        } catch (Throwable e) {
+//            e.printStackTrace();
+//        }
         try {
             fixInstalledProviders();
         } catch (Throwable e) {

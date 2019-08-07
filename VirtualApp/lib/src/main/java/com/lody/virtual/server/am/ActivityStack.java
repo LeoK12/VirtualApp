@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.Log;
 import android.util.SparseArray;
 
 import com.lody.virtual.client.core.VirtualCore;
@@ -41,7 +42,7 @@ import static android.content.pm.ActivityInfo.LAUNCH_SINGLE_TOP;
  */
 
 /* package */ class ActivityStack {
-
+    private final String TAG = ActivityStack.class.getSimpleName();
     private final ActivityManager mAM;
     private final VActivityManagerService mService;
 
@@ -416,7 +417,9 @@ import static android.content.pm.ActivityInfo.LAUNCH_SINGLE_TOP;
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                Log.d(TAG, "destIntent = " + destIntent);
                 VirtualCore.get().getContext().startActivity(destIntent, options);
+                Log.d(TAG, "startActivity end:destIntent = " + destIntent);
             } else {
                 VirtualCore.get().getContext().startActivity(destIntent);
             }

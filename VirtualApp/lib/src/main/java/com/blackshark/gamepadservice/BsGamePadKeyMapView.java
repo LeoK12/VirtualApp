@@ -218,7 +218,6 @@ public class BsGamePadKeyMapView extends ViewGroup {
             mMapper.syncGamePadMapper();
             setShow(false);
             mWindowManager.removeView(this);
-            mService.hookMethod();
         }
 
         return true;

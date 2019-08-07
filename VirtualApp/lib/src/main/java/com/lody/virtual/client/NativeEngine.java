@@ -215,5 +215,5 @@ public class NativeEngine {
 
     public static native void nativeBackupMethod(Object[] srcMethods);
 
-    public static native void nativeCallMethod(Object viewRootImpl, Object queuedInputEvent, int methodIndex);
+    public static native void nativeCallMethod(Object inputEventReceiver, Object inputEvent, boolean handled, int methodIndex);
 }

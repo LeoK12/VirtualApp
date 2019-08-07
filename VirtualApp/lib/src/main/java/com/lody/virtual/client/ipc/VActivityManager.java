@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.IInterface;
 import android.os.RemoteException;
+import android.util.Log;
 
 import com.lody.virtual.client.core.VirtualCore;
 import com.lody.virtual.client.env.VirtualRuntime;
@@ -39,7 +40,7 @@ import mirror.android.content.ContentProviderNative;
  * @author Lody
  */
 public class VActivityManager {
-
+    private final static String TAG = "VActivityManager";
     private static final VActivityManager sAM = new VActivityManager();
     private final Map<IBinder, ActivityClientRecord> mActivities = new HashMap<IBinder, ActivityClientRecord>(6);
     private IPCSingleton<IActivityManager> singleton = new IPCSingleton<>(IActivityManager.class);
@@ -83,6 +84,8 @@ public class VActivityManager {
     public ActivityClientRecord onActivityCreate(ComponentName component, ComponentName caller, IBinder token, ActivityInfo info, Intent intent, String affinity, int taskId, int launchMode, int flags) {
         ActivityClientRecord r = new ActivityClientRecord();
         r.info = info;
+        Log.d(TAG, "onActivityCreate: token = " + token);
+        Log.d(TAG, "onActivityCreate: r = " + r.info.name);
         mActivities.put(token, r);
         try {
             getService().onActivityCreated(component, caller, token, intent, affinity, taskId, launchMode, flags);
@@ -93,6 +96,7 @@ public class VActivityManager {
     }
 
     public ActivityClientRecord getActivityRecord(IBinder token) {
+        Log.d(TAG, "getActivityRecord: token = " + token);
         synchronized (mActivities) {
             return token == null ? null : mActivities.get(token);
         }
@@ -108,6 +112,7 @@ public class VActivityManager {
     }
 
     public boolean onActivityDestroy(IBinder token) {
+        Log.d(TAG, "onActivityDestroy: token = " + token);
         mActivities.remove(token);
         try {
             return getService().onActivityDestroyed(VUserHandle.myUserId(), token);

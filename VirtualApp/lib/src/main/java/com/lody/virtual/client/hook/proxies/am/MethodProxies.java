@@ -31,6 +31,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 
+import com.Debug.Debug;
 import com.lody.virtual.client.VClientImpl;
 import com.lody.virtual.client.badger.BadgerManager;
 import com.lody.virtual.client.core.VirtualCore;
@@ -377,13 +378,14 @@ class MethodProxies {
 
         @Override
         public Object call(Object who, Method method, Object... args) throws Throwable {
-
-            Log.d("Q_M", "---->StartActivity 类");
+            Log.d(getMethodName(), "getCallers = " + Debug.getCallers(10));
 
             int intentIndex = ArrayUtils.indexOfObject(args, Intent.class, 1);
             if (intentIndex < 0) {
+                Log.d(getMethodName(), "getCallers = " + Debug.getCallers(2));
                 return ActivityManagerCompat.START_INTENT_NOT_RESOLVED;
             }
+
             int resultToIndex = ArrayUtils.indexOfObject(args, IBinder.class, 2);
             String resolvedType = (String) args[intentIndex + 1];
             Intent intent = (Intent) args[intentIndex];
@@ -392,6 +394,7 @@ class MethodProxies {
             int userId = VUserHandle.myUserId();
 
             if (ComponentUtils.isStubComponent(intent)) {
+                Log.d(getMethodName(), "getCallers = " + Debug.getCallers(3));
                 return method.invoke(who, args);
             }
 
@@ -399,6 +402,7 @@ class MethodProxies {
                     || (Intent.ACTION_VIEW.equals(intent.getAction())
                     && "application/vnd.android.package-archive".equals(intent.getType()))) {
                 if (handleInstallRequest(intent)) {
+                    Log.d(getMethodName(), "getCallers = " + Debug.getCallers(4));
                     return 0;
                 }
             } else if ((Intent.ACTION_UNINSTALL_PACKAGE.equals(intent.getAction())
@@ -406,6 +410,7 @@ class MethodProxies {
                     && "package".equals(intent.getScheme())) {
 
                 if (handleUninstallRequest(intent)) {
+                    Log.d(getMethodName(), "getCallers = " + Debug.getCallers(5));
                     return 0;
                 }
             }
@@ -424,6 +429,7 @@ class MethodProxies {
                 intent.putExtra(ChooserActivity.EXTRA_DATA, options);
                 intent.putExtra(ChooserActivity.EXTRA_WHO, resultWho);
                 intent.putExtra(ChooserActivity.EXTRA_REQUEST_CODE, requestCode);
+                Log.d(getMethodName(), "getCallers = " + Debug.getCallers(6));
                 return method.invoke(who, args);
             }
 
@@ -445,6 +451,7 @@ class MethodProxies {
                 Log.d("Q_M", "---->StartActivity resultTo=" + resultTo);
 
                 if (intent.getPackage() != null && isAppPkg(intent.getPackage())) {
+                    Log.d(getMethodName(), "getCallers = " + Debug.getCallers(7));
                     return ActivityManagerCompat.START_INTENT_NOT_RESOLVED;
                 }
 
@@ -452,9 +459,11 @@ class MethodProxies {
                         && intent.getCategories().contains("android.intent.category.HOME")
                         && resultTo != null) {
                     VActivityManager.get().finishActivity(resultTo);
+                    Log.d(getMethodName(), "getCallers = " + Debug.getCallers(8));
                     return 0;
                 }
 
+                Log.d(getMethodName(), "getCallers = " + Debug.getCallers(9));
                 return method.invoke(who, args);
             }
             int res = VActivityManager.get().startActivity(intent, activityInfo, resultTo, options, resultWho, requestCode, VUserHandle.myUserId());
@@ -484,6 +493,7 @@ class MethodProxies {
                     }
                 }
             }
+            Log.d(getMethodName(), "getCallers = " + Debug.getCallers(10));
             return res;
         }
 
